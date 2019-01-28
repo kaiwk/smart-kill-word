@@ -1,4 +1,4 @@
-;;; smart-kill-word.el --- delete word in smart way
+;;; smart-kill-word.el --- delete words in a smart way
 
 ;; Copyright (C) 2018  Wang Kai
 
@@ -24,40 +24,61 @@
 ;;;     - for word like 'getThingFromList', it kills the whole word
 ;;;
 ;;; 1. Don't kill too much
-;;; 2. For word 'getThingFromList', smart-kill-word will kill 'List', then 'From',
+;;; 2. For word 'getThingFromList', `smart-kill-word' will kill 'List', then 'From',
 ;;; 'Thing' and 'get'
 ;;
 
 ;;; Code:
 
 
-;;;###autoload
-(defun smart-kill-word (arg)
-  (interactive "p")
-  (when (looking-back "\\ca\\s-*")
-    (let* ((word-end (save-excursion (backward-word) (forward-word) (point)))
+(defun skw--beginning-of-line-p ()
+  (= (current-column) 0))
+
+
+(defun skw--kill-capital-word ()
+  "Kill capital word, if it is successful, return t, otherwise return nil.
+For example, fooBarFoo| => fooBar| => foo|"
+  (interactive)
+  (when (not (skw--beginning-of-line-p))
+    (let* ((word-end (save-excursion
+                       (backward-word)
+                       (forward-word)
+                       (point)))
            (word-beg (save-excursion
                        (backward-word)
                        (save-match-data
                          (let ((case-fold-search nil))
-                           (if (re-search-forward "\\([a-z].*[A-Z]\\)" word-end t)
+                           (if (re-search-forward "\\([a-z]*.*[A-Z]+\\)" word-end t)
                                (- (match-end 1) 1)
-                             nil)))))
-           (delimiter-end (point))
-           (delimiter-beg (save-excursion
-                            (backward-word) (forward-word)
-                            (save-match-data
-                              (if (re-search-forward "\\([-_,.; ]\\)" delimiter-end t)
-                                  (match-beginning 1)
-                                delimiter-end)))))
-      ;; clear spaces
-      (ignore-errors (kill-region delimiter-beg delimiter-end))
-      (goto-char word-end)
-      ;; delete word
+                             nil))))))
       (if word-beg
           (progn
-            (kill-region word-beg word-end))
-        (kill-word (- arg))))))
+            (kill-region word-beg word-end)
+            t)
+        nil))))
+
+
+(defun skw--kill-whitespace ()
+  "Kill whitespace. For example, foo...| => foo|"
+  (interactive)
+  (when (not (skw--beginning-of-line-p))
+    (let ((first-non-white (save-excursion
+                             (backward-char)
+                             (while (and (looking-at-p "\\s-") (not (skw--beginning-of-line-p)))
+                               (backward-char))
+                             (if (not (skw--beginning-of-line-p))
+                                 (forward-char))
+                             (point))))
+      (kill-region first-non-white (point)))))
+
+
+;;;###autoload
+(defun smart-kill-word (arg)
+  (interactive "p")
+  (skw--kill-whitespace)
+  (when (and (not (skw--kill-capital-word))
+             (not (skw--beginning-of-line-p)))
+    (backward-kill-word arg)))
 
 
 (provide 'smart-kill-word)

@@ -1,5 +1,5 @@
-1. Don't kill too much, default `backward-kill-word' kills line above when
-   cursor at beginning of line
+1. Don't kill too much, default =backward-kill-word= kills line above when cursor
+   at beginning of line
 2. For word 'getThingFromList', smart-kill-word will kill 'List', then 'From',
    'Thing' and 'get'
 
